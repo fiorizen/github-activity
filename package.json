@@ -12,5 +12,11 @@
   "license": "MIT",
   "devDependencies": {
     "mock-fs": "^5.2.0"
+  },
+  "engines": {
+    "node": ">=22.7.0"
+  },
+  "volta": {
+    "node": "22.7.0"
   }
 }
