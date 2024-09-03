@@ -74,3 +74,27 @@ describe('writeTasks', () => {
     assert.deepEqual(result, '[{"id":1,"title":"task1"}]')
   })
 })
+
+describe('addTask', () => {
+  beforeEach(() => {
+    vol.fromJSON({
+      'tasks.json': JSON.stringify([{ id: 1, title: 'task1' }]),
+    })
+  })
+  afterEach(() => {
+    vol.reset()
+  })
+  it('Happy: Add task with id 1 if null', () => {
+    vol.fromJSON({ 'tasks.json': '' })
+    const id = addTask('first task')
+    assert.equal(id, 1)
+    const result = mfs.readFileSync('tasks.json', 'utf8')
+    assert.deepEqual(result, '[{"id":1,"title":"first task"}]')
+  })
+  it('Happy: Add task with incremented ID', () => {
+    const id = addTask('new task')
+    assert.equal(id, 2)
+    const result = mfs.readFileSync('tasks.json', 'utf8')
+    assert.deepEqual(result, '[{"id":1,"title":"task1"},{"id":2,"title":"new task"}]')
+  })
+})
