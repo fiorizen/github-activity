@@ -1,6 +1,6 @@
 #!/usr/bin/env ts-node
 
-import fs from 'fs'
+import fs from 'node:fs'
 import path from 'path'
 
 type Task = {
@@ -14,7 +14,9 @@ const tasksFilePath = path.resolve('tasks.json')
  * 現状のTaskをすべて返す
  */
 export function readTasks(): Task[] {
-  const tasks = JSON.parse(fs.readFileSync(tasksFilePath).toString('utf-8'))
+  const json = fs.readFileSync(tasksFilePath).toString('utf-8')
+  if (!json) return []
+  const tasks = JSON.parse(json)
   return tasks
 }
 
@@ -22,6 +24,7 @@ export function readTasks(): Task[] {
  * 引数でJSONファイルを上書きする
  */
 export function writeTasks(tasks: Task[]): void {
+  if (!tasks) return
   const str = JSON.stringify(tasks)
   fs.writeFileSync(tasksFilePath, str, { encoding: 'utf-8' })
 }
