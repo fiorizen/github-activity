@@ -5,13 +5,16 @@
   "type": "module",
   "main": "main.js",
   "scripts": {
-    "test": "node --test",
-    "test:watch": "node --test --watch"
+    "test": "node --import tsx --test",
+    "test:watch": "node --import tsx --test --watch"
   },
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "mock-fs": "^5.2.0"
+    "@types/node": "^22.5.2",
+    "mock-fs": "^5.2.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.4"
   },
   "engines": {
     "node": ">=22.7.0"

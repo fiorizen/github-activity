@@ -6,23 +6,23 @@ Node.js answer of [Task Tracker](https://roadmap.sh/projects/task-tracker) Proje
 
 ```
 # Adding a new task
-./main.js add "Buy groceries"
+npx tsx ./main.ts add "Buy groceries"
 
 # Updating and deleting
-./main.js update 1 "Buy groceries and cook dinner"
-./main.js delete 1
+npx tsx ./main.ts update 1 "Buy groceries and cook dinner"
+npx tsx ./main.ts delete 1
 
 # Marking a task as in progress or done
-./main.js mark-in-progress 1
-./main.js mark-done 1
+npx tsx ./main.ts mark-in-progress 1
+npx tsx ./main.ts mark-done 1
 
 # Listing all tasks
-./main.js list
+npx tsx ./main.ts list
 
 # Listing tasks by status
-./main.js list done
-./main.js list todo
-./main.js list in-progress
+npx tsx ./main.ts list done
+npx tsx ./main.ts list todo
+npx tsx ./main.ts list in-progress
 ```
 
 ## Test
