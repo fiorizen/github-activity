@@ -12,10 +12,18 @@ const COMMANDS = {
   'mark-done': 'mark-done',
 }
 
+type StatusCommand = keyof Pick<typeof COMMANDS, 'mark-in-progress' | 'mark-done'>
+
+const TASK_STATUS = {
+  todo: 'todo',
+  'in-progress': 'in-progress',
+  done: 'done',
+} as const
+
 type Task = {
   id: number
   description: string
-  status: 'todo' | 'in-progress' | 'done'
+  status: keyof typeof TASK_STATUS
   createdAt: string
   updatedAt: string
 }
@@ -77,6 +85,28 @@ export function updateTask(id: Task['id'], description: Task['description']) {
   )
 }
 
+export function markTaskStatus(statusCommand: StatusCommand, id: Task['id']) {
+  if (!statusCommand || !id) return
+  const status =
+    statusCommand === 'mark-done'
+      ? TASK_STATUS.done
+      : statusCommand === 'mark-in-progress'
+      ? TASK_STATUS['in-progress']
+      : ''
+  if (!status) return
+  const tasks = readTasks()
+  writeTasks(
+    tasks.map((t) => {
+      if (t.id !== id) return t
+      return {
+        ...t,
+        status,
+        updatedAt: new Date().toISOString(),
+      }
+    })
+  )
+}
+
 /**
  * 条件に応じてタスクを絞り込んで返す
  * TODO: 条件設定対応
@@ -109,6 +139,10 @@ function main() {
       deleteTask(Number(args[1]))
       break
     }
+    case COMMANDS['mark-in-progress']:
+    case COMMANDS['mark-done']:
+      markTaskStatus(command as StatusCommand, Number(args[2]))
+      break
     case COMMANDS.list: {
       console.log(filterTasks(args?.[1]))
       break

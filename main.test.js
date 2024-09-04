@@ -1,7 +1,15 @@
 import { fs as mfs, vol } from 'memfs'
 import { mock, describe, it, beforeEach, afterEach, after } from 'node:test'
 import { strict as assert } from 'node:assert'
-import { filterTasks, readTasks, writeTasks, addTask, deleteTask, updateTask } from './main.js'
+import {
+  filterTasks,
+  readTasks,
+  writeTasks,
+  addTask,
+  deleteTask,
+  updateTask,
+  markTaskStatus,
+} from './main.js'
 import fs from 'node:fs'
 const { readFileSync } = mfs
 
@@ -10,9 +18,15 @@ mock.method(fs, 'readFileSync', mfs.readFileSync)
 mock.method(fs, 'writeFileSync', mfs.writeFileSync)
 
 const startTime = '2024-01-02T11:01:58.135Z'
-mock.timers.enable({
-  apis: ['Date'],
-  now: new Date(startTime),
+
+beforeEach(() => {
+  mock.timers.enable({
+    apis: ['Date'],
+    now: new Date(startTime),
+  })
+})
+afterEach(() => {
+  mock.timers.reset()
 })
 
 const commonTask = {
@@ -77,11 +91,23 @@ describe('writeTasks', () => {
       { ...commonTask, id: 1, description: 'task1new' },
       { ...commonTask, id: 2, description: 'task2' },
     ])
-    const result = readFileSync('tasks.json', 'utf8')
-    assert.deepEqual(
-      result,
-      '[{"status":"todo","createdAt":"2024-01-02T11:01:58.135Z","updatedAt":"2024-01-02T11:01:58.135Z","id":1,"description":"task1new"},{"status":"todo","createdAt":"2024-01-02T11:01:58.135Z","updatedAt":"2024-01-02T11:01:58.135Z","id":2,"description":"task2"}]'
-    )
+    const result = readTasks()
+    assert.deepEqual(result, [
+      {
+        status: 'todo',
+        createdAt: '2024-01-02T11:01:58.135Z',
+        updatedAt: '2024-01-02T11:01:58.135Z',
+        id: 1,
+        description: 'task1new',
+      },
+      {
+        status: 'todo',
+        createdAt: '2024-01-02T11:01:58.135Z',
+        updatedAt: '2024-01-02T11:01:58.135Z',
+        id: 2,
+        description: 'task2',
+      },
+    ])
   })
   it('Happy: Nothing changed with no arg', () => {
     writeTasks()
@@ -212,7 +238,7 @@ describe('updateTask', () => {
     const result = mfs.readFileSync('tasks.json', 'utf8')
     assert.deepEqual(result, startJSON)
   })
-  it('Update task1 description', (context) => {
+  it('Update task1 description', () => {
     mock.timers.tick(1000)
     updateTask(1, 'updated task1')
     const result = mfs.readFileSync('tasks.json', 'utf8')
@@ -237,5 +263,94 @@ describe('updateTask', () => {
         },
       ])
     )
+  })
+})
+
+describe('markTaskStatus', () => {
+  const initialTasks = [
+    {
+      ...commonTask,
+      id: 1,
+      description: 'task1',
+    },
+    {
+      ...commonTask,
+      id: 2,
+      description: 'task2',
+    },
+    {
+      ...commonTask,
+      id: 3,
+      description: 'task3',
+    },
+  ]
+  const startJSON = JSON.stringify(initialTasks)
+  beforeEach(() => {
+    vol.fromJSON({
+      'tasks.json': startJSON,
+    })
+  })
+  after(() => vol.reset())
+  it('Nothing changes with no args', () => {
+    markTaskStatus()
+    assert.deepEqual(readTasks(), initialTasks)
+  })
+  it('Nothing changes with no id', () => {
+    markTaskStatus('mark-in-progress')
+    assert.deepEqual(readTasks(), initialTasks)
+  })
+  it('Nothing changes with incorrect status', () => {
+    markTaskStatus('incorrect', 1)
+    assert.deepEqual(readTasks(), initialTasks)
+  })
+  it('Nothing changes with new id', () => {
+    markTaskStatus('mark-in-progress', 99)
+    assert.deepEqual(readTasks(), initialTasks)
+  })
+  it('Update task1 as in-progress', () => {
+    mock.timers.tick(1000)
+    markTaskStatus('mark-in-progress', 1)
+    assert.deepEqual(readTasks(), [
+      {
+        ...commonTask,
+        id: 1,
+        description: 'task1',
+        status: 'in-progress',
+        updatedAt: '2024-01-02T11:01:59.135Z',
+      },
+      {
+        ...commonTask,
+        id: 2,
+        description: 'task2',
+      },
+      {
+        ...commonTask,
+        id: 3,
+        description: 'task3',
+      },
+    ])
+  })
+  it('Update task2 as done', () => {
+    mock.timers.tick(1000)
+    markTaskStatus('mark-done', 2)
+    assert.deepEqual(readTasks(), [
+      {
+        ...commonTask,
+        id: 1,
+        description: 'task1',
+      },
+      {
+        ...commonTask,
+        id: 2,
+        description: 'task2',
+        status: 'done',
+        updatedAt: '2024-01-02T11:01:59.135Z',
+      },
+      {
+        ...commonTask,
+        id: 3,
+        description: 'task3',
+      },
+    ])
   })
 })
