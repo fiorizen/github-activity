@@ -36,33 +36,31 @@ const commonTask = {
 }
 
 describe('readTasks', () => {
+  const initialTasks = [
+    { ...commonTask, id: 1, description: 'task1' },
+    { ...commonTask, id: 2, description: 'task2' },
+  ]
   beforeEach(() => {
     vol.fromJSON({
-      'tasks.json': JSON.stringify([
-        { ...commonTask, id: 1, description: 'task1' },
-        { ...commonTask, id: 2, description: 'task2' },
-      ]),
+      'tasks.json': JSON.stringify(initialTasks),
     })
   })
   after(() => {
     vol.reset()
   })
   it('Always return all tasks', () => {
-    const res = readTasks()
-    assert.deepEqual(res, [
-      { ...commonTask, id: 1, description: 'task1' },
-      { ...commonTask, id: 2, description: 'task2' },
-    ])
+    assert.deepEqual(readTasks(), initialTasks)
   })
 })
 
 describe('filterTasks', () => {
+  const initialTasks = [
+    { ...commonTask, id: 1, description: 'task1' },
+    { ...commonTask, id: 2, description: 'task2' },
+  ]
   beforeEach(() => {
     vol.fromJSON({
-      'tasks.json': JSON.stringify([
-        { ...commonTask, id: 1, description: 'task1' },
-        { ...commonTask, id: 2, description: 'task2' },
-      ]),
+      'tasks.json': JSON.stringify(initialTasks),
     })
   })
   afterEach(() => {
@@ -70,17 +68,15 @@ describe('filterTasks', () => {
   })
   it('with no args: should return all tasks', () => {
     const res = filterTasks()
-    assert.deepEqual(res, [
-      { ...commonTask, id: 1, description: 'task1' },
-      { ...commonTask, id: 2, description: 'task2' },
-    ])
+    assert.deepEqual(res, initialTasks)
   })
 })
 
 describe('writeTasks', () => {
   beforeEach(() => {
+    const initialTasks = [{ ...commonTask, id: 1, description: 'task1' }]
     vol.fromJSON({
-      'tasks.json': JSON.stringify([{ ...commonTask, id: 1, description: 'task1' }]),
+      'tasks.json': JSON.stringify(initialTasks),
     })
   })
   afterEach(() => {
@@ -91,8 +87,7 @@ describe('writeTasks', () => {
       { ...commonTask, id: 1, description: 'task1new' },
       { ...commonTask, id: 2, description: 'task2' },
     ])
-    const result = readTasks()
-    assert.deepEqual(result, [
+    assert.deepEqual(readTasks(), [
       {
         status: 'todo',
         createdAt: '2024-01-02T11:01:58.135Z',
@@ -120,9 +115,10 @@ describe('writeTasks', () => {
 })
 
 describe('addTask', () => {
+  const initialTasks = [{ ...commonTask, id: 1, description: 'task1', status: 'todo' }]
   beforeEach(() => {
     vol.fromJSON({
-      'tasks.json': JSON.stringify([{ id: 1, description: 'task1', status: 'todo' }]),
+      'tasks.json': JSON.stringify(initialTasks),
     })
   })
   afterEach(() => {
@@ -132,25 +128,34 @@ describe('addTask', () => {
     vol.fromJSON({ 'tasks.json': '' })
     const id = addTask('first task')
     assert.equal(id, 1)
-    const result = mfs.readFileSync('tasks.json', 'utf8')
-    assert.deepEqual(
-      result,
-      '[{"id":1,"description":"first task","status":"todo","createdAt":"2024-01-02T11:01:58.135Z","updatedAt":"2024-01-02T11:01:58.135Z"}]'
-    )
+    assert.deepEqual(readTasks(), [
+      {
+        id: 1,
+        description: 'first task',
+        status: 'todo',
+        createdAt: '2024-01-02T11:01:58.135Z',
+        updatedAt: '2024-01-02T11:01:58.135Z',
+      },
+    ])
   })
   it('Happy: Add task with incremented ID', () => {
     const id = addTask('new task')
     assert.equal(id, 2)
-    const result = mfs.readFileSync('tasks.json', 'utf8')
-    assert.deepEqual(
-      result,
-      '[{"id":1,"description":"task1","status":"todo"},{"id":2,"description":"new task","status":"todo","createdAt":"2024-01-02T11:01:58.135Z","updatedAt":"2024-01-02T11:01:58.135Z"}]'
-    )
+    assert.deepEqual(readTasks(), [
+      { ...commonTask, id: 1, description: 'task1', status: 'todo' },
+      {
+        id: 2,
+        description: 'new task',
+        status: 'todo',
+        createdAt: '2024-01-02T11:01:58.135Z',
+        updatedAt: '2024-01-02T11:01:58.135Z',
+      },
+    ])
   })
 })
 
 describe('deleteTask', () => {
-  const startJSON = JSON.stringify([
+  const initialTasks = [
     {
       ...commonTask,
       id: 1,
@@ -161,7 +166,8 @@ describe('deleteTask', () => {
       id: 2,
       description: 'task2',
     },
-  ])
+  ]
+  const startJSON = JSON.stringify(initialTasks)
   beforeEach(() => {
     vol.fromJSON({
       'tasks.json': startJSON,
@@ -170,32 +176,26 @@ describe('deleteTask', () => {
   after(() => vol.reset())
   it('Happy: delete a task from multiple tasks', () => {
     deleteTask(1)
-    const result = mfs.readFileSync('tasks.json', 'utf8')
-    assert.deepEqual(
-      result,
-      JSON.stringify([
-        {
-          ...commonTask,
-          id: 2,
-          description: 'task2',
-        },
-      ])
-    )
+    assert.deepEqual(readTasks(), [
+      {
+        ...commonTask,
+        id: 2,
+        description: 'task2',
+      },
+    ])
   })
   it('Happy: delete all task', () => {
     deleteTask(1)
     deleteTask(2)
-    const result = mfs.readFileSync('tasks.json', 'utf8')
-    assert.deepEqual(result, '')
+    assert.deepEqual(readTasks(), [])
   })
   it('Sad: Nothing changed with no arg', () => {
     deleteTask()
-    const result = mfs.readFileSync('tasks.json', 'utf8')
-    assert.deepEqual(result, startJSON)
+    assert.deepEqual(readTasks(), initialTasks)
   })
 })
 describe('updateTask', () => {
-  const startJSON = JSON.stringify([
+  const initialTasks = [
     {
       ...commonTask,
       id: 1,
@@ -211,7 +211,8 @@ describe('updateTask', () => {
       id: 3,
       description: 'task3',
     },
-  ])
+  ]
+  const startJSON = JSON.stringify(initialTasks)
   beforeEach(() => {
     vol.fromJSON({
       'tasks.json': startJSON,
@@ -220,49 +221,41 @@ describe('updateTask', () => {
   after(() => vol.reset())
   it('Nothing changes with no args', () => {
     updateTask()
-    const result = mfs.readFileSync('tasks.json', 'utf8')
-    assert.deepEqual(result, startJSON)
+    assert.deepEqual(readTasks(), initialTasks)
   })
   it('Nothing changes with no id', () => {
     updateTask(undefined, 'updated task')
-    const result = mfs.readFileSync('tasks.json', 'utf8')
-    assert.deepEqual(result, startJSON)
+    assert.deepEqual(readTasks(), initialTasks)
   })
   it('Nothing changes with no description', () => {
     updateTask(1)
-    const result = mfs.readFileSync('tasks.json', 'utf8')
-    assert.deepEqual(result, startJSON)
+    assert.deepEqual(readTasks(), initialTasks)
   })
   it('Nothing changes with new id', () => {
     updateTask(99, 'updated task')
-    const result = mfs.readFileSync('tasks.json', 'utf8')
-    assert.deepEqual(result, startJSON)
+    assert.deepEqual(readTasks(), initialTasks)
   })
   it('Update task1 description', () => {
     mock.timers.tick(1000)
     updateTask(1, 'updated task1')
-    const result = mfs.readFileSync('tasks.json', 'utf8')
-    assert.deepEqual(
-      result,
-      JSON.stringify([
-        {
-          ...commonTask,
-          id: 1,
-          description: 'updated task1',
-          updatedAt: '2024-01-02T11:01:59.135Z',
-        },
-        {
-          ...commonTask,
-          id: 2,
-          description: 'task2',
-        },
-        {
-          ...commonTask,
-          id: 3,
-          description: 'task3',
-        },
-      ])
-    )
+    assert.deepEqual(readTasks(), [
+      {
+        ...commonTask,
+        id: 1,
+        description: 'updated task1',
+        updatedAt: '2024-01-02T11:01:59.135Z',
+      },
+      {
+        ...commonTask,
+        id: 2,
+        description: 'task2',
+      },
+      {
+        ...commonTask,
+        id: 3,
+        description: 'task3',
+      },
+    ])
   })
 })
 
