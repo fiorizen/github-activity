@@ -71,9 +71,8 @@ describe('filterTasks', () => {
     const res = filterTasks()
     assert.deepEqual(res, initialTasks)
   })
-  it('with unknown args: should return no tasks', () => {
-    const res = filterTasks('unknown status')
-    assert.deepEqual(res, [])
+  it('Sad: Should throw with unknown status', () => {
+    assert.throws(() => filterTasks('unknown status'))
   })
   it('Should return todo tasks', () => {
     assert.deepEqual(filterTasks('todo'), [
@@ -144,6 +143,10 @@ describe('addTask', () => {
   afterEach(() => {
     vol.reset()
   })
+  it('Nothing changes if description is null', () => {
+    assert.throws(() => addTask(''))
+    assert.deepEqual(readTasks(), initialTasks)
+  })
   it('Happy: Add task with id 1 if null', () => {
     vol.fromJSON({ 'tasks.json': '' })
     const id = addTask('first task')
@@ -210,7 +213,11 @@ describe('deleteTask', () => {
     assert.deepEqual(readTasks(), [])
   })
   it('Sad: Nothing changed with no arg', () => {
-    deleteTask()
+    assert.throws(() => deleteTask())
+    assert.deepEqual(readTasks(), initialTasks)
+  })
+  it('Sad: Nothing changed with unknown arg', () => {
+    deleteTask(99)
     assert.deepEqual(readTasks(), initialTasks)
   })
 })
@@ -240,19 +247,19 @@ describe('updateTask', () => {
   })
   after(() => vol.reset())
   it('Nothing changes with no args', () => {
-    updateTask()
+    assert.throws(() => updateTask())
     assert.deepEqual(readTasks(), initialTasks)
   })
   it('Nothing changes with no id', () => {
-    updateTask(undefined, 'updated task')
+    assert.throws(() => updateTask(undefined, 'updated task'))
     assert.deepEqual(readTasks(), initialTasks)
   })
   it('Nothing changes with no description', () => {
-    updateTask(1)
+    assert.throws(() => updateTask(1))
     assert.deepEqual(readTasks(), initialTasks)
   })
   it('Nothing changes with new id', () => {
-    updateTask(99, 'updated task')
+    assert.throws(() => updateTask(99, 'updated task'))
     assert.deepEqual(readTasks(), initialTasks)
   })
   it('Update task1 description', () => {
@@ -304,16 +311,16 @@ describe('markTaskStatus', () => {
     })
   })
   after(() => vol.reset())
-  it('Nothing changes with no args', () => {
-    markTaskStatus()
+  it('Sad: Nothing changes with no args', () => {
+    assert.throws(() => markTaskStatus())
     assert.deepEqual(readTasks(), initialTasks)
   })
   it('Nothing changes with no id', () => {
-    markTaskStatus('mark-in-progress')
+    assert.throws(() => markTaskStatus('mark-in-progress'))
     assert.deepEqual(readTasks(), initialTasks)
   })
   it('Nothing changes with incorrect status', () => {
-    markTaskStatus('incorrect', 1)
+    assert.throws(() => markTaskStatus('incorrect', 1))
     assert.deepEqual(readTasks(), initialTasks)
   })
   it('Nothing changes with new id', () => {
