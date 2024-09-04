@@ -44,7 +44,7 @@ export function readTasks(): Task[] {
  */
 export function writeTasks(tasks: Task[]): void {
   if (!tasks) return
-  const str = JSON.stringify(tasks)
+  const str = tasks?.length > 0 ? JSON.stringify(tasks) : ''
   fs.writeFileSync(tasksFilePath, str, { encoding: 'utf-8' })
 }
 
@@ -54,6 +54,12 @@ export function addTask(description: Task['description']): Task['id'] {
   const now = new Date().toISOString()
   writeTasks([...tasks, { id, description, status: 'todo', createdAt: now, updatedAt: now }])
   return id
+}
+
+export function deleteTask(id: Task['id']) {
+  if (!id) return
+  const tasks = readTasks()
+  writeTasks(tasks.filter((t) => t.id !== id))
 }
 
 /**
@@ -82,13 +88,18 @@ function main() {
     }
     case COMMANDS.update: {
       console.log(`FIXME: UPDATE`)
+      break
     }
     case COMMANDS.delete: {
-      console.log('FIXME: DELETE')
+      deleteTask(Number(args[1]))
+      break
     }
     case COMMANDS.list: {
       console.log(filterTasks(args?.[1]))
+      break
     }
+    default:
+      break
   }
 }
 

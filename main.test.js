@@ -1,7 +1,7 @@
 import { fs as mfs, vol } from 'memfs'
 import { mock, describe, it, beforeEach, afterEach, after } from 'node:test'
 import { strict as assert } from 'node:assert'
-import { filterTasks, readTasks, writeTasks, addTask } from './main.js'
+import { filterTasks, readTasks, writeTasks, addTask, deleteTask } from './main.js'
 import fs from 'node:fs'
 const { readFileSync } = mfs
 
@@ -120,5 +120,51 @@ describe('addTask', () => {
       result,
       '[{"id":1,"description":"task1","status":"todo"},{"id":2,"description":"new task","status":"todo","createdAt":"2024-01-02T11:01:58.135Z","updatedAt":"2024-01-02T11:01:58.135Z"}]'
     )
+  })
+})
+
+describe('deleteTask', () => {
+  const startJson = JSON.stringify([
+    {
+      ...commonTask,
+      id: 1,
+      description: 'task1',
+    },
+    {
+      ...commonTask,
+      id: 2,
+      description: 'task2',
+    },
+  ])
+  beforeEach(() => {
+    vol.fromJSON({
+      'tasks.json': startJson,
+    })
+  })
+  after(() => vol.reset())
+  it('Happy: delete a task from multiple tasks', () => {
+    deleteTask(1)
+    const result = mfs.readFileSync('tasks.json', 'utf8')
+    assert.deepEqual(
+      result,
+      JSON.stringify([
+        {
+          ...commonTask,
+          id: 2,
+          description: 'task2',
+        },
+      ])
+    )
+  })
+  it('Happy: delete all task', () => {
+    deleteTask(1)
+    deleteTask(2)
+    const result = mfs.readFileSync('tasks.json', 'utf8')
+    assert.deepEqual(result, '')
+  })
+  it('Sad: Nothing changed with no arg', () => {
+    deleteTask()
+    const result = mfs.readFileSync('tasks.json', 'utf8')
+    assert.deepEqual(result, startJson)
   })
 })
