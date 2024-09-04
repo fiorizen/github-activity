@@ -32,9 +32,13 @@ const tasksFilePath = path.resolve('tasks.json')
 
 function showUsage() {
   console.log('Usage:')
-  console.log('  list       - List all tasks')
-  console.log('  add <task> - Add a new task')
-  console.log('  remove <id> - Remove a task by id')
+  console.log('  add <description> - Add a new task')
+  console.log('  update <id> <description> - Update a task description')
+  console.log('  delete <id> - Remove a task by id')
+  console.log('  mark-in-progress <id> - Mark a task as in-progress')
+  console.log('  mark-done <id> - Mark a task as done')
+  console.log('  list            - List all tasks')
+  console.log('  list <status>   - List tasks filtered by status')
 }
 
 /**
@@ -116,10 +120,9 @@ export function filterTasks(status?: Task['status']): Task[] {
   return tasks.filter((t) => t.status === status)
 }
 
-// TODO: コマンドライン引数を解釈して必要な関数を実行する
 function main() {
   const args = process.argv.slice(2)
-  if (args.length === 0) {
+  if (args.length === 0 || ['-h', '--help'].includes(args?.[0])) {
     showUsage()
     return
   }
