@@ -55,8 +55,9 @@ describe('readTasks', () => {
 
 describe('filterTasks', () => {
   const initialTasks = [
-    { ...commonTask, id: 1, description: 'task1' },
-    { ...commonTask, id: 2, description: 'task2' },
+    { ...commonTask, id: 1, description: 'this is a todo task' },
+    { ...commonTask, id: 2, description: 'this is an in-progress task', status: 'in-progress' },
+    { ...commonTask, id: 3, description: 'this is a done task', status: 'done' },
   ]
   beforeEach(() => {
     vol.fromJSON({
@@ -69,6 +70,25 @@ describe('filterTasks', () => {
   it('with no args: should return all tasks', () => {
     const res = filterTasks()
     assert.deepEqual(res, initialTasks)
+  })
+  it('with unknown args: should return no tasks', () => {
+    const res = filterTasks('unknown status')
+    assert.deepEqual(res, [])
+  })
+  it('Should return todo tasks', () => {
+    assert.deepEqual(filterTasks('todo'), [
+      { ...commonTask, id: 1, description: 'this is a todo task' },
+    ])
+  })
+  it('Should return in-progress tasks', () => {
+    assert.deepEqual(filterTasks('in-progress'), [
+      { ...commonTask, id: 2, description: 'this is an in-progress task', status: 'in-progress' },
+    ])
+  })
+  it('Should return done tasks', () => {
+    assert.deepEqual(filterTasks('done'), [
+      { ...commonTask, id: 3, description: 'this is a done task', status: 'done' },
+    ])
   })
 })
 

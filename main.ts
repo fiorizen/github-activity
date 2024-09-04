@@ -109,11 +109,11 @@ export function markTaskStatus(statusCommand: StatusCommand, id: Task['id']) {
 
 /**
  * 条件に応じてタスクを絞り込んで返す
- * TODO: 条件設定対応
  */
-export function filterTasks(status?: string): Task[] {
+export function filterTasks(status?: Task['status']): Task[] {
   const tasks = readTasks()
-  return tasks
+  if (!status) return tasks
+  return tasks.filter((t) => t.status === status)
 }
 
 // TODO: コマンドライン引数を解釈して必要な関数を実行する
@@ -122,7 +122,6 @@ function main() {
   if (args.length === 0) {
     showUsage()
     return
-    // process.exit(1)
   }
   const command = args[0]
   switch (command) {
@@ -141,10 +140,11 @@ function main() {
     }
     case COMMANDS['mark-in-progress']:
     case COMMANDS['mark-done']:
-      markTaskStatus(command as StatusCommand, Number(args[2]))
+      markTaskStatus(command as StatusCommand, Number(args[1]))
       break
     case COMMANDS.list: {
-      console.log(filterTasks(args?.[1]))
+      const tasks = filterTasks(args?.[1] as Task['status'] | undefined)
+      tasks.forEach((t) => console.log(`${t.status}: ${t.description} (ID: ${t.id})`))
       break
     }
     default:
