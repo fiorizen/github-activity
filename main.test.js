@@ -1,7 +1,7 @@
 import { fs as mfs, vol } from 'memfs'
 import { mock, describe, it, beforeEach, afterEach, after } from 'node:test'
 import { strict as assert } from 'node:assert'
-import { filterTasks, readTasks, writeTasks, addTask, deleteTask } from './main.js'
+import { filterTasks, readTasks, writeTasks, addTask, deleteTask, updateTask } from './main.js'
 import fs from 'node:fs'
 const { readFileSync } = mfs
 
@@ -124,7 +124,7 @@ describe('addTask', () => {
 })
 
 describe('deleteTask', () => {
-  const startJson = JSON.stringify([
+  const startJSON = JSON.stringify([
     {
       ...commonTask,
       id: 1,
@@ -138,7 +138,7 @@ describe('deleteTask', () => {
   ])
   beforeEach(() => {
     vol.fromJSON({
-      'tasks.json': startJson,
+      'tasks.json': startJSON,
     })
   })
   after(() => vol.reset())
@@ -165,6 +165,77 @@ describe('deleteTask', () => {
   it('Sad: Nothing changed with no arg', () => {
     deleteTask()
     const result = mfs.readFileSync('tasks.json', 'utf8')
-    assert.deepEqual(result, startJson)
+    assert.deepEqual(result, startJSON)
+  })
+})
+describe('updateTask', () => {
+  const startJSON = JSON.stringify([
+    {
+      ...commonTask,
+      id: 1,
+      description: 'task1',
+    },
+    {
+      ...commonTask,
+      id: 2,
+      description: 'task2',
+    },
+    {
+      ...commonTask,
+      id: 3,
+      description: 'task3',
+    },
+  ])
+  beforeEach(() => {
+    vol.fromJSON({
+      'tasks.json': startJSON,
+    })
+  })
+  after(() => vol.reset())
+  it('Nothing changes with no args', () => {
+    updateTask()
+    const result = mfs.readFileSync('tasks.json', 'utf8')
+    assert.deepEqual(result, startJSON)
+  })
+  it('Nothing changes with no id', () => {
+    updateTask(undefined, 'updated task')
+    const result = mfs.readFileSync('tasks.json', 'utf8')
+    assert.deepEqual(result, startJSON)
+  })
+  it('Nothing changes with no description', () => {
+    updateTask(1)
+    const result = mfs.readFileSync('tasks.json', 'utf8')
+    assert.deepEqual(result, startJSON)
+  })
+  it('Nothing changes with new id', () => {
+    updateTask(99, 'updated task')
+    const result = mfs.readFileSync('tasks.json', 'utf8')
+    assert.deepEqual(result, startJSON)
+  })
+  it('Update task1 description', (context) => {
+    mock.timers.tick(1000)
+    updateTask(1, 'updated task1')
+    const result = mfs.readFileSync('tasks.json', 'utf8')
+    assert.deepEqual(
+      result,
+      JSON.stringify([
+        {
+          ...commonTask,
+          id: 1,
+          description: 'updated task1',
+          updatedAt: '2024-01-02T11:01:59.135Z',
+        },
+        {
+          ...commonTask,
+          id: 2,
+          description: 'task2',
+        },
+        {
+          ...commonTask,
+          id: 3,
+          description: 'task3',
+        },
+      ])
+    )
   })
 })

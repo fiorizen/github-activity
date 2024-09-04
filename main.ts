@@ -62,6 +62,21 @@ export function deleteTask(id: Task['id']) {
   writeTasks(tasks.filter((t) => t.id !== id))
 }
 
+export function updateTask(id: Task['id'], description: Task['description']) {
+  if (!id || !description) return
+  const tasks = readTasks()
+  writeTasks(
+    tasks.map((t) => {
+      if (t.id !== id) return t
+      return {
+        ...t,
+        description,
+        updatedAt: new Date().toISOString(),
+      }
+    })
+  )
+}
+
 /**
  * 条件に応じてタスクを絞り込んで返す
  * TODO: 条件設定対応
@@ -87,7 +102,7 @@ function main() {
       break
     }
     case COMMANDS.update: {
-      console.log(`FIXME: UPDATE`)
+      updateTask(Number(args[1]), args[2])
       break
     }
     case COMMANDS.delete: {
