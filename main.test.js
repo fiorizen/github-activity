@@ -9,12 +9,24 @@ const { readFileSync } = mfs
 mock.method(fs, 'readFileSync', mfs.readFileSync)
 mock.method(fs, 'writeFileSync', mfs.writeFileSync)
 
+const startTime = '2024-01-02T11:01:58.135Z'
+mock.timers.enable({
+  apis: ['Date'],
+  now: new Date(startTime),
+})
+
+const commonTask = {
+  status: 'todo',
+  createdAt: startTime,
+  updatedAt: startTime,
+}
+
 describe('readTasks', () => {
   beforeEach(() => {
     vol.fromJSON({
       'tasks.json': JSON.stringify([
-        { id: 1, description: 'task1', status: 'todo' },
-        { id: 2, description: 'task2', status: 'todo' },
+        { ...commonTask, id: 1, description: 'task1' },
+        { ...commonTask, id: 2, description: 'task2' },
       ]),
     })
   })
@@ -24,8 +36,8 @@ describe('readTasks', () => {
   it('Always return all tasks', () => {
     const res = readTasks()
     assert.deepEqual(res, [
-      { id: 1, description: 'task1', status: 'todo' },
-      { id: 2, description: 'task2', status: 'todo' },
+      { ...commonTask, id: 1, description: 'task1' },
+      { ...commonTask, id: 2, description: 'task2' },
     ])
   })
 })
@@ -34,8 +46,8 @@ describe('filterTasks', () => {
   beforeEach(() => {
     vol.fromJSON({
       'tasks.json': JSON.stringify([
-        { id: 1, description: 'task1', status: 'todo' },
-        { id: 2, description: 'task2', status: 'todo' },
+        { ...commonTask, id: 1, description: 'task1' },
+        { ...commonTask, id: 2, description: 'task2' },
       ]),
     })
   })
@@ -45,8 +57,8 @@ describe('filterTasks', () => {
   it('with no args: should return all tasks', () => {
     const res = filterTasks()
     assert.deepEqual(res, [
-      { id: 1, description: 'task1', status: 'todo' },
-      { id: 2, description: 'task2', status: 'todo' },
+      { ...commonTask, id: 1, description: 'task1' },
+      { ...commonTask, id: 2, description: 'task2' },
     ])
   })
 })
@@ -54,7 +66,7 @@ describe('filterTasks', () => {
 describe('writeTasks', () => {
   beforeEach(() => {
     vol.fromJSON({
-      'tasks.json': JSON.stringify([{ id: 1, description: 'task1', status: 'todo' }]),
+      'tasks.json': JSON.stringify([{ ...commonTask, id: 1, description: 'task1' }]),
     })
   })
   afterEach(() => {
@@ -62,19 +74,22 @@ describe('writeTasks', () => {
   })
   it('Happy: overwrite whole data with arg', () => {
     writeTasks([
-      { id: 1, description: 'task1new', status: 'todo' },
-      { id: 2, description: 'task2', status: 'todo' },
+      { ...commonTask, id: 1, description: 'task1new' },
+      { ...commonTask, id: 2, description: 'task2' },
     ])
     const result = readFileSync('tasks.json', 'utf8')
     assert.deepEqual(
       result,
-      '[{"id":1,"description":"task1new","status":"todo"},{"id":2,"description":"task2","status":"todo"}]'
+      '[{"status":"todo","createdAt":"2024-01-02T11:01:58.135Z","updatedAt":"2024-01-02T11:01:58.135Z","id":1,"description":"task1new"},{"status":"todo","createdAt":"2024-01-02T11:01:58.135Z","updatedAt":"2024-01-02T11:01:58.135Z","id":2,"description":"task2"}]'
     )
   })
   it('Happy: Nothing changed with no arg', () => {
     writeTasks()
     const result = readFileSync('tasks.json', 'utf8')
-    assert.deepEqual(result, '[{"id":1,"description":"task1","status":"todo"}]')
+    assert.deepEqual(
+      result,
+      '[{"status":"todo","createdAt":"2024-01-02T11:01:58.135Z","updatedAt":"2024-01-02T11:01:58.135Z","id":1,"description":"task1"}]'
+    )
   })
 })
 
@@ -92,7 +107,10 @@ describe('addTask', () => {
     const id = addTask('first task')
     assert.equal(id, 1)
     const result = mfs.readFileSync('tasks.json', 'utf8')
-    assert.deepEqual(result, '[{"id":1,"description":"first task","status":"todo"}]')
+    assert.deepEqual(
+      result,
+      '[{"id":1,"description":"first task","status":"todo","createdAt":"2024-01-02T11:01:58.135Z","updatedAt":"2024-01-02T11:01:58.135Z"}]'
+    )
   })
   it('Happy: Add task with incremented ID', () => {
     const id = addTask('new task')
@@ -100,7 +118,7 @@ describe('addTask', () => {
     const result = mfs.readFileSync('tasks.json', 'utf8')
     assert.deepEqual(
       result,
-      '[{"id":1,"description":"task1","status":"todo"},{"id":2,"description":"new task","status":"todo"}]'
+      '[{"id":1,"description":"task1","status":"todo"},{"id":2,"description":"new task","status":"todo","createdAt":"2024-01-02T11:01:58.135Z","updatedAt":"2024-01-02T11:01:58.135Z"}]'
     )
   })
 })

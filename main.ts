@@ -16,6 +16,8 @@ type Task = {
   id: number
   description: string
   status: 'todo' | 'in-progress' | 'done'
+  createdAt: string
+  updatedAt: string
 }
 
 const tasksFilePath = path.resolve('tasks.json')
@@ -49,7 +51,8 @@ export function writeTasks(tasks: Task[]): void {
 export function addTask(description: Task['description']): Task['id'] {
   const tasks = readTasks()
   const id = tasks.length > 0 ? Math.max(...tasks.map((t) => t.id)) + 1 : 1
-  writeTasks([...tasks, { id, description, status: 'todo' }])
+  const now = new Date().toISOString()
+  writeTasks([...tasks, { id, description, status: 'todo', createdAt: now, updatedAt: now }])
   return id
 }
 
