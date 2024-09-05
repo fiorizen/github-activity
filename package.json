@@ -4,7 +4,11 @@
   "description": "",
   "type": "module",
   "main": "main.js",
+  "bin": {
+    "tsc-cli": "npx tsx ./main.ts"
+  },
   "scripts": {
+    "build": "tsc",
     "test": "node --import tsx --test",
     "test:watch": "node --import tsx --test --watch"
   },
