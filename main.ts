@@ -36,17 +36,17 @@ export async function getGithubUserActivity(username: string) {
 /**
  * Show Github activity data with console.log
  */
-export function showGithubActivity(activity: any) {
+export function showGithubActivity(activity: Activity) {
   if (!activity.length) {
     console.log("No recent activity found.");
     return;
   }
 
-  activity.forEach((event: any) => {
+  activity.forEach((event: Event) => {
     let action = "";
     switch (event.type) {
       case "PushEvent": {
-        const count = event.payload.commits.length;
+        const count = event.payload.commits?.length ?? 0;
         action = `Pushed ${count} commit(s) to ${event.repo.name}`;
         break;
       }
