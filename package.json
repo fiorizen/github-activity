@@ -16,7 +16,9 @@
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^22.5.2",
+    "fetch-mock": "^11.1.5",
     "memfs": "^4.11.1",
+    "sinon": "^19.0.2",
     "tsx": "^4.19.0",
     "typescript": "^5.5.4"
   },
