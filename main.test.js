@@ -1,376 +1,147 @@
-import { fs as mfs, vol } from 'memfs'
-import { mock, describe, it, beforeEach, afterEach, after } from 'node:test'
-import { strict as assert } from 'node:assert'
-import {
-  filterTasks,
-  readTasks,
-  writeTasks,
-  addTask,
-  deleteTask,
-  updateTask,
-  markTaskStatus,
-} from './main.js'
-import fs from 'node:fs'
-const { readFileSync } = mfs
+import fetchMock from "fetch-mock";
+import { fs as mfs } from "memfs";
+import { strict as assert } from "node:assert";
+import fs from "node:fs";
+import { afterEach, beforeEach, describe, it, mock } from "node:test";
+import sinon from "sinon";
+import { getGithubUserActivity, showGithubActivity } from "./main.js";
 
 // テスト中は実際のファイルは触らない
-mock.method(fs, 'readFileSync', mfs.readFileSync)
-mock.method(fs, 'writeFileSync', mfs.writeFileSync)
+mock.method(fs, "readFileSync", mfs.readFileSync);
+mock.method(fs, "writeFileSync", mfs.writeFileSync);
 
-const startTime = '2024-01-02T11:01:58.135Z'
+const startTime = "2024-01-02T11:01:58.135Z";
 
 beforeEach(() => {
   mock.timers.enable({
-    apis: ['Date'],
+    apis: ["Date"],
     now: new Date(startTime),
-  })
-})
+  });
+});
 afterEach(() => {
-  mock.timers.reset()
-})
+  mock.timers.reset();
+});
 
-const commonTask = {
-  status: 'todo',
-  createdAt: startTime,
-  updatedAt: startTime,
-}
-
-describe('readTasks', () => {
-  const initialTasks = [
-    { ...commonTask, id: 1, description: 'task1' },
-    { ...commonTask, id: 2, description: 'task2' },
-  ]
+describe("getGithubUserActivity", () => {
+  const username = "octocat";
+  const mockResponse = [
+    {
+      id: "1234567890",
+      type: "PushEvent",
+      actor: {
+        id: 1,
+        login: "octocat",
+        display_login: "octocat",
+        gravatar_id: "",
+        url: "https://api.github.com/users/octocat",
+        avatar_url: "https://github.com/images/error/octocat_happy.gif",
+      },
+      repo: {
+        id: 123456,
+        name: "octocat/Hello-World",
+        url: "https://api.github.com/repos/octocat/Hello-World",
+      },
+      payload: {
+        push_id: 1234567890,
+        size: 1,
+        distinct_size: 1,
+        ref: "refs/heads/main",
+        head: "abc123",
+        before: "def456",
+        commits: [
+          {
+            sha: "abc123",
+            author: {
+              email: "octocat@github.com",
+              name: "The Octocat",
+            },
+            message: "Fix all the bugs",
+            distinct: true,
+            url: "https://api.github.com/repos/octocat/Hello-World/commits/abc123",
+          },
+        ],
+      },
+      public: true,
+      created_at: "2023-10-01T12:34:56Z",
+    },
+  ];
   beforeEach(() => {
-    vol.fromJSON({
-      'tasks.json': JSON.stringify(initialTasks),
-    })
-  })
-  after(() => {
-    vol.reset()
-  })
-  it('Always return all tasks', () => {
-    assert.deepEqual(readTasks(), initialTasks)
-  })
-})
-
-describe('filterTasks', () => {
-  const initialTasks = [
-    { ...commonTask, id: 1, description: 'this is a todo task' },
-    { ...commonTask, id: 2, description: 'this is an in-progress task', status: 'in-progress' },
-    { ...commonTask, id: 3, description: 'this is a done task', status: 'done' },
-  ]
-  beforeEach(() => {
-    vol.fromJSON({
-      'tasks.json': JSON.stringify(initialTasks),
-    })
-  })
+    fetchMock.get("https://api.github.com/users/octocat/events", mockResponse);
+  });
   afterEach(() => {
-    vol.reset()
-  })
-  it('with no args: should return all tasks', () => {
-    const res = filterTasks()
-    assert.deepEqual(res, initialTasks)
-  })
-  it('Sad: Should throw with unknown status', () => {
-    assert.throws(() => filterTasks('unknown status'))
-  })
-  it('Should return todo tasks', () => {
-    assert.deepEqual(filterTasks('todo'), [
-      { ...commonTask, id: 1, description: 'this is a todo task' },
-    ])
-  })
-  it('Should return in-progress tasks', () => {
-    assert.deepEqual(filterTasks('in-progress'), [
-      { ...commonTask, id: 2, description: 'this is an in-progress task', status: 'in-progress' },
-    ])
-  })
-  it('Should return done tasks', () => {
-    assert.deepEqual(filterTasks('done'), [
-      { ...commonTask, id: 3, description: 'this is a done task', status: 'done' },
-    ])
-  })
-})
+    fetchMock.reset();
+  });
+  it("Happy: should return user activity", async () => {
+    const result = await getGithubUserActivity(username);
+    assert.deepEqual(result, mockResponse);
+  });
+});
 
-describe('writeTasks', () => {
+describe("showGithubActivity", () => {
+  let consoleLogStub;
   beforeEach(() => {
-    const initialTasks = [{ ...commonTask, id: 1, description: 'task1' }]
-    vol.fromJSON({
-      'tasks.json': JSON.stringify(initialTasks),
-    })
-  })
+    consoleLogStub = sinon.stub(console, "log");
+  });
   afterEach(() => {
-    vol.reset()
-  })
-  it('Happy: overwrite whole data with arg', () => {
-    writeTasks([
-      { ...commonTask, id: 1, description: 'task1new' },
-      { ...commonTask, id: 2, description: 'task2' },
-    ])
-    assert.deepEqual(readTasks(), [
-      {
-        status: 'todo',
-        createdAt: '2024-01-02T11:01:58.135Z',
-        updatedAt: '2024-01-02T11:01:58.135Z',
-        id: 1,
-        description: 'task1new',
-      },
-      {
-        status: 'todo',
-        createdAt: '2024-01-02T11:01:58.135Z',
-        updatedAt: '2024-01-02T11:01:58.135Z',
-        id: 2,
-        description: 'task2',
-      },
-    ])
-  })
-  it('Happy: Nothing changed with no arg', () => {
-    writeTasks()
-    const result = readFileSync('tasks.json', 'utf8')
-    assert.deepEqual(
-      result,
-      '[{"status":"todo","createdAt":"2024-01-02T11:01:58.135Z","updatedAt":"2024-01-02T11:01:58.135Z","id":1,"description":"task1"}]'
-    )
-  })
-})
+    consoleLogStub.restore();
+  });
 
-describe('addTask', () => {
-  const initialTasks = [{ ...commonTask, id: 1, description: 'task1', status: 'todo' }]
-  beforeEach(() => {
-    vol.fromJSON({
-      'tasks.json': JSON.stringify(initialTasks),
-    })
-  })
-  afterEach(() => {
-    vol.reset()
-  })
-  it('Nothing changes if description is null', () => {
-    assert.throws(() => addTask(''))
-    assert.deepEqual(readTasks(), initialTasks)
-  })
-  it('Happy: Add task with id 1 if null', () => {
-    vol.fromJSON({ 'tasks.json': '' })
-    const id = addTask('first task')
-    assert.equal(id, 1)
-    assert.deepEqual(readTasks(), [
-      {
-        id: 1,
-        description: 'first task',
-        status: 'todo',
-        createdAt: '2024-01-02T11:01:58.135Z',
-        updatedAt: '2024-01-02T11:01:58.135Z',
-      },
-    ])
-  })
-  it('Happy: Add task with incremented ID', () => {
-    const id = addTask('new task')
-    assert.equal(id, 2)
-    assert.deepEqual(readTasks(), [
-      { ...commonTask, id: 1, description: 'task1', status: 'todo' },
-      {
-        id: 2,
-        description: 'new task',
-        status: 'todo',
-        createdAt: '2024-01-02T11:01:58.135Z',
-        updatedAt: '2024-01-02T11:01:58.135Z',
-      },
-    ])
-  })
-})
+  it('Happy: should log "No recent activity found." when activity is empty', () => {
+    showGithubActivity([]);
+    assert(consoleLogStub.calledOnceWith("No recent activity found."));
+  });
 
-describe('deleteTask', () => {
-  const initialTasks = [
-    {
-      ...commonTask,
-      id: 1,
-      description: 'task1',
-    },
-    {
-      ...commonTask,
-      id: 2,
-      description: 'task2',
-    },
-  ]
-  const startJSON = JSON.stringify(initialTasks)
-  beforeEach(() => {
-    vol.fromJSON({
-      'tasks.json': startJSON,
-    })
-  })
-  after(() => vol.reset())
-  it('Happy: delete a task from multiple tasks', () => {
-    deleteTask(1)
-    assert.deepEqual(readTasks(), [
+  it("Happy: should log push event activity", () => {
+    const activity = [
       {
-        ...commonTask,
-        id: 2,
-        description: 'task2',
+        type: "PushEvent",
+        payload: {
+          commits: [{}, {}],
+        },
+        repo: {
+          name: "octocat/Hello-World",
+        },
       },
-    ])
-  })
-  it('Happy: delete all task', () => {
-    deleteTask(1)
-    deleteTask(2)
-    assert.deepEqual(readTasks(), [])
-  })
-  it('Sad: Nothing changed with no arg', () => {
-    assert.throws(() => deleteTask())
-    assert.deepEqual(readTasks(), initialTasks)
-  })
-  it('Sad: Nothing changed with unknown arg', () => {
-    deleteTask(99)
-    assert.deepEqual(readTasks(), initialTasks)
-  })
-})
-describe('updateTask', () => {
-  const initialTasks = [
-    {
-      ...commonTask,
-      id: 1,
-      description: 'task1',
-    },
-    {
-      ...commonTask,
-      id: 2,
-      description: 'task2',
-    },
-    {
-      ...commonTask,
-      id: 3,
-      description: 'task3',
-    },
-  ]
-  const startJSON = JSON.stringify(initialTasks)
-  beforeEach(() => {
-    vol.fromJSON({
-      'tasks.json': startJSON,
-    })
-  })
-  after(() => vol.reset())
-  it('Nothing changes with no args', () => {
-    assert.throws(() => updateTask())
-    assert.deepEqual(readTasks(), initialTasks)
-  })
-  it('Nothing changes with no id', () => {
-    assert.throws(() => updateTask(undefined, 'updated task'))
-    assert.deepEqual(readTasks(), initialTasks)
-  })
-  it('Nothing changes with no description', () => {
-    assert.throws(() => updateTask(1))
-    assert.deepEqual(readTasks(), initialTasks)
-  })
-  it('Nothing changes with new id', () => {
-    assert.throws(() => updateTask(99, 'updated task'))
-    assert.deepEqual(readTasks(), initialTasks)
-  })
-  it('Update task1 description', () => {
-    mock.timers.tick(1000)
-    updateTask(1, 'updated task1')
-    assert.deepEqual(readTasks(), [
-      {
-        ...commonTask,
-        id: 1,
-        description: 'updated task1',
-        updatedAt: '2024-01-02T11:01:59.135Z',
-      },
-      {
-        ...commonTask,
-        id: 2,
-        description: 'task2',
-      },
-      {
-        ...commonTask,
-        id: 3,
-        description: 'task3',
-      },
-    ])
-  })
-})
+    ];
+    showGithubActivity(activity);
+    assert(
+      consoleLogStub.calledOnceWith(
+        "- Pushed 2 commit(s) to octocat/Hello-World"
+      )
+    );
+  });
 
-describe('markTaskStatus', () => {
-  const initialTasks = [
-    {
-      ...commonTask,
-      id: 1,
-      description: 'task1',
-    },
-    {
-      ...commonTask,
-      id: 2,
-      description: 'task2',
-    },
-    {
-      ...commonTask,
-      id: 3,
-      description: 'task3',
-    },
-  ]
-  const startJSON = JSON.stringify(initialTasks)
-  beforeEach(() => {
-    vol.fromJSON({
-      'tasks.json': startJSON,
-    })
-  })
-  after(() => vol.reset())
-  it('Sad: Nothing changes with no args', () => {
-    assert.throws(() => markTaskStatus())
-    assert.deepEqual(readTasks(), initialTasks)
-  })
-  it('Nothing changes with no id', () => {
-    assert.throws(() => markTaskStatus('mark-in-progress'))
-    assert.deepEqual(readTasks(), initialTasks)
-  })
-  it('Nothing changes with incorrect status', () => {
-    assert.throws(() => markTaskStatus('incorrect', 1))
-    assert.deepEqual(readTasks(), initialTasks)
-  })
-  it('Nothing changes with new id', () => {
-    markTaskStatus('mark-in-progress', 99)
-    assert.deepEqual(readTasks(), initialTasks)
-  })
-  it('Update task1 as in-progress', () => {
-    mock.timers.tick(1000)
-    markTaskStatus('mark-in-progress', 1)
-    assert.deepEqual(readTasks(), [
+  it("should log create event activity", () => {
+    const activity = [
       {
-        ...commonTask,
-        id: 1,
-        description: 'task1',
-        status: 'in-progress',
-        updatedAt: '2024-01-02T11:01:59.135Z',
+        type: "CreateEvent",
+        payload: {
+          ref_type: "repository",
+        },
+        repo: {
+          name: "octocat/Hello-World",
+        },
       },
+    ];
+    showGithubActivity(activity);
+    assert(
+      consoleLogStub.calledOnceWith(
+        "- Created repository in octocat/Hello-World"
+      )
+    );
+  });
+
+  it("Sad: should not log for unsupported event types", () => {
+    const activity = [
       {
-        ...commonTask,
-        id: 2,
-        description: 'task2',
+        type: "DeleteEvent",
+        payload: {},
+        repo: {
+          name: "octocat/Hello-World",
+        },
       },
-      {
-        ...commonTask,
-        id: 3,
-        description: 'task3',
-      },
-    ])
-  })
-  it('Update task2 as done', () => {
-    mock.timers.tick(1000)
-    markTaskStatus('mark-done', 2)
-    assert.deepEqual(readTasks(), [
-      {
-        ...commonTask,
-        id: 1,
-        description: 'task1',
-      },
-      {
-        ...commonTask,
-        id: 2,
-        description: 'task2',
-        status: 'done',
-        updatedAt: '2024-01-02T11:01:59.135Z',
-      },
-      {
-        ...commonTask,
-        id: 3,
-        description: 'task3',
-      },
-    ])
-  })
-})
+    ];
+    showGithubActivity(activity);
+    assert(consoleLogStub.notCalled);
+  });
+});
